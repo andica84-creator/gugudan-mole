@@ -1,5 +1,5 @@
 // 구구단 두더지 랭킹 API
-// GET  /api/scores?date=2026-09-28  → 그날 랭킹(상위 30개)
+// GET  /api/scores?date=2026-09-28  → 그날 기록 전체 (단 조합별 순위는 화면에서 나눠요)
 // POST /api/scores                   → 기록 저장 (날짜는 서버가 한국 시간으로 정함)
 import { Redis } from "@upstash/redis";
 
@@ -22,7 +22,7 @@ export default async function handler(req, res) {
       const scores = raw
         .map((r) => JSON.parse(r))
         .sort((a, b) => b.score - a.score || a.ts - b.ts)
-        .slice(0, 30);
+        .slice(0, 1000);
       return res.status(200).json({ date, scores });
     }
 

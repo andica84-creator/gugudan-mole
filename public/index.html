@@ -148,6 +148,8 @@ h2{margin:6px 0 4px;font-size:20px;font-weight:normal}
 .board .rk{font-size:22px;text-align:center}
 .board .who small{display:block;font-size:13px;color:var(--ink-soft)}
 .board .pt{font-size:22px}
+.combos{margin-bottom:6px}
+.combo{font-size:16px}
 .empty{text-align:center;color:var(--ink-soft);padding:24px 0;font-size:17px}
 .note{font-size:13px;color:var(--ink-soft);text-align:center;margin:6px 0 0}
 @media (prefers-reduced-motion: reduce){
@@ -205,11 +207,14 @@ h2{margin:6px 0 4px;font-size:20px;font-weight:normal}
   <!-- 랭킹 화면 -->
   <section id="rankScreen" class="hidden">
     <h2>날짜별 랭킹</h2>
+    <p class="hint">같은 단을 고른 친구들끼리 순위를 매겨요.</p>
     <div class="datebar">
       <button class="arrow" id="prevDay" aria-label="전날">◀</button>
       <input type="date" id="dateIn" aria-label="날짜 고르기">
       <button class="arrow" id="nextDay" aria-label="다음날">▶</button>
     </div>
+    <div class="row combos" id="combos" aria-label="단 조합 고르기"></div>
+    <h2 id="comboTitle"></h2>
     <ol class="board" id="board"></ol>
     <button class="big" id="homeBtn">처음으로</button>
     <p class="note" id="storeNote"></p>
@@ -388,7 +393,7 @@ async function saveScore(){
     const res=await fetch("/api/scores",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(rec)});
     if(!res.ok) throw new Error();
     const saved=await res.json();
-    lastSavedId=saved.id;
+    lastSavedId=saved.id; wantCombo=comboKey(saved.dans);
     openRank(saved.date);
   }catch(e){
     $("saveMsg").textContent="랭킹에 올리지 못했어요. 인터넷 연결을 확인하고 다시 눌러 주세요.";
@@ -399,16 +404,18 @@ $("saveBtn").onclick=saveScore;
 $("nameIn").addEventListener("keydown",e=>{ if(e.key==="Enter") saveScore(); });
 
 function openRank(date){ $("dateIn").value=date||todayKST(); show("rankScreen"); loadRank(); }
-$("rankBtn1").onclick=()=>openRank();
+$("rankBtn1").onclick=()=>{ wantCombo=null; openRank(); };
 $("homeBtn").onclick=()=>{ $("timePill").textContent="⏱ "+fmt(gameTime); show("startScreen"); };
 $("prevDay").onclick=()=>{ $("dateIn").value=shiftDate($("dateIn").value||todayKST(),-1); loadRank(); };
 $("nextDay").onclick=()=>{ $("dateIn").value=shiftDate($("dateIn").value||todayKST(),1); loadRank(); };
 $("dateIn").onchange=loadRank;
 
 let loadSeq=0;
+let wantCombo=null;   // 보여 줄 단 조합 (예: "2,3,4")
+const comboKey=d=>[...d].map(Number).sort((x,y)=>x-y).join(",");
 async function loadRank(){
   const date=$("dateIn").value; const seq=++loadSeq;
-  const board=$("board"); board.innerHTML=""; 
+  const board=$("board"); board.innerHTML=""; $("combos").innerHTML=""; $("comboTitle").textContent="";
   let rows=[];
   $("storeNote").textContent="";
   try{
@@ -421,15 +428,39 @@ async function loadRank(){
     return;
   }
   if(seq!==loadSeq) return;
-  rows.sort((a,b)=>b.score-a.score || a.ts-b.ts);
-  if(!rows.length){ const li=document.createElement("li"); li.className="empty"; li.style.display="block"; li.style.background="none"; li.textContent="이 날짜에는 아직 기록이 없어요. 게임을 해서 첫 번째로 올라가 보세요!"; board.appendChild(li); return; }
+  if(!rows.length){ emptyMsg("이 날짜에는 아직 기록이 없어요. 게임을 해서 첫 번째로 올라가 보세요!"); return; }
+
+  // 단 조합별로 묶기
+  const groups=new Map();
+  rows.forEach(r=>{ const k=comboKey(r.dans||[]); if(!groups.has(k)) groups.set(k,[]); groups.get(k).push(r); });
+  const keys=[...groups.keys()].sort((x,y)=>{ const ax=x.split(",").map(Number), ay=y.split(",").map(Number);
+    for(let i=0;i<Math.min(ax.length,ay.length);i++) if(ax[i]!==ay[i]) return ax[i]-ay[i];
+    return ax.length-ay.length; });
+  let cur=(wantCombo && groups.has(wantCombo)) ? wantCombo
+        : (groups.has(comboKey(selected)) ? comboKey(selected) : keys[0]);
+
+  keys.forEach(k=>{
+    const b=document.createElement("button"); b.className="small combo";
+    b.textContent=`${danLabel(k.split(",").map(Number))} (${groups.get(k).length})`;
+    b.setAttribute("aria-pressed",k===cur);
+    b.onclick=()=>{ wantCombo=k; loadRankRender(groups,keys,k); };
+    $("combos").appendChild(b);
+  });
+  loadRankRender(groups,keys,cur);
+}
+function emptyMsg(t){ const li=document.createElement("li"); li.className="empty"; li.style.display="block"; li.style.background="none"; li.textContent=t; $("board").appendChild(li); }
+function loadRankRender(groups,keys,cur){
+  $("combos").querySelectorAll("button").forEach((b,i)=>b.setAttribute("aria-pressed",keys[i]===cur));
+  $("comboTitle").textContent=`${danLabel(cur.split(",").map(Number))} 랭킹`;
+  const board=$("board"); board.innerHTML="";
+  const rows=[...groups.get(cur)].sort((a,b)=>b.score-a.score || a.ts-b.ts);
   const medals=["🥇","🥈","🥉"];
   rows.slice(0,30).forEach((r,i)=>{
     const li=document.createElement("li"); if(r.id===lastSavedId) li.className="me";
     const rk=document.createElement("span"); rk.className="rk"; rk.textContent=medals[i]||(i+1);
     const who=document.createElement("span"); who.className="who"; who.textContent=r.name;
     const sm=document.createElement("small");
-    const t=new Date(r.ts); sm.textContent=`${danLabel(r.dans||[])} · ${minLabel(r.time||180)} · ${String(t.getHours()).padStart(2,"0")}:${String(t.getMinutes()).padStart(2,"0")}`;
+    const t=new Date(r.ts); sm.textContent=`${minLabel(r.time||180)} · ${String(t.getHours()).padStart(2,"0")}:${String(t.getMinutes()).padStart(2,"0")}`;
     who.appendChild(sm);
     const pt=document.createElement("span"); pt.className="pt"; pt.textContent=r.score+"점";
     li.append(rk,who,pt); board.appendChild(li);
