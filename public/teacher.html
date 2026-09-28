@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>기록 관리 · 구구단 두더지</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
+<style>
+:root{
+  --sky1:#bfe7f5; --sky2:#9fd8b8;
+  --frame:#5a3b22; --frame-hi:#7a5332;
+  --card:#fffaf0; --ink:#3d2a18; --ink-soft:#7a6450;
+  --sun:#ffd23f; --sun-deep:#f5a300;
+  --grass1:#8fcf5a; --grass2:#5fa83a;
+  --hole:#2a1810; --red:#e8453c; --good:#2f9e44;
+  --chip-off:#f1e6d3;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --sky1:#1d3440; --sky2:#1f3a2c; --card:#2b2118; --ink:#fbeede; --ink-soft:#c9b49c; --chip-off:#3d3024;
+  }
+}
+:root[data-theme="dark"]{
+  --sky1:#1d3440; --sky2:#1f3a2c; --card:#2b2118; --ink:#fbeede; --ink-soft:#c9b49c; --chip-off:#3d3024;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+html,body{margin:0;min-height:100%}
+body{
+  font-family:"Jua","Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif;
+  background:linear-gradient(180deg,var(--sky1),var(--sky2));
+  color:var(--ink);
+  display:flex;justify-content:center;padding:16px 12px;
+  -webkit-tap-highlight-color:transparent;
+}
+.app{
+  width:100%;max-width:440px;
+  background:var(--card);border:6px solid var(--frame);border-radius:28px;
+  padding:14px;box-shadow:0 8px 0 var(--frame-hi);
+}
+button{font-family:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible{outline:3px solid #2f6fdf;outline-offset:2px}
+.hidden{display:none!important}
+
+/* header */
+.top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
+.logo{font-size:22px;color:var(--frame);letter-spacing:.5px}
+:root[data-theme="dark"] .logo{color:var(--sun)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .logo{color:var(--sun)}}
+.pills{display:flex;gap:6px}
+.pill{border-radius:12px;padding:5px 10px;font-size:15px;color:#fff;background:#5a3b22}
+.pill.time{background:var(--red)}
+
+/* start screen */
+h2{margin:6px 0 4px;font-size:20px;font-weight:normal}
+.hint{margin:0 0 12px;color:var(--ink-soft);font-size:15px}
+.chips{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px}
+.chip{
+  border:3px solid var(--frame);border-radius:16px;padding:12px 0;font-size:22px;
+  background:var(--chip-off);color:var(--ink);box-shadow:0 4px 0 var(--frame);
+  transition:transform .08s;
+}
+.chip[aria-pressed="true"]{background:var(--sun);color:#3d2a18}
+.chip:active{transform:translateY(3px);box-shadow:0 1px 0 var(--frame)}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.small{
+  border:2px solid var(--frame);border-radius:12px;background:transparent;color:var(--ink);
+  padding:6px 12px;font-size:15px;
+}
+.small[aria-pressed="true"]{background:var(--frame);color:#fff}
+.big{
+  width:100%;border:none;border-radius:18px;padding:16px;font-size:24px;color:#fff;
+  background:var(--good);box-shadow:0 6px 0 #1f6b2e;margin-top:4px;
+}
+.big:disabled{background:#a9a29a;box-shadow:0 6px 0 #7d766f;cursor:not-allowed}
+.big.alt{background:#2f6fdf;box-shadow:0 6px 0 #1f4ea3}
+.big:active:not(:disabled){transform:translateY(4px);box-shadow:0 2px 0 #1f6b2e}
+.sel-sum{min-height:22px;font-size:16px;color:var(--ink-soft);margin:0 0 6px}
+
+/* game */
+.target{
+  background:linear-gradient(180deg,var(--sun),var(--sun-deep));
+  border:4px solid var(--frame);border-radius:20px;text-align:center;padding:6px 8px 4px;color:#3d2a18;
+  margin-bottom:10px;
+}
+.target small{font-size:14px;display:block}
+.target b{font-weight:normal;font-size:56px;line-height:1.05;display:block}
+.target.flash{animation:flash .35s}
+@keyframes flash{50%{transform:scale(1.06)}}
+.field{
+  background:radial-gradient(circle at 50% 30%,var(--grass1),var(--grass2));
+  border:4px solid var(--frame);border-radius:20px;padding:14px 8px 18px;
+  display:grid;grid-template-columns:repeat(3,1fr);gap:4px 6px;position:relative;
+}
+.cell{position:relative;height:150px}
+.hole{
+  position:absolute;left:8%;right:8%;bottom:6px;height:52px;border-radius:50%;
+  background:var(--hole);box-shadow:inset 0 6px 10px rgba(0,0,0,.6);
+}
+.pit{position:absolute;left:0;right:0;bottom:22px;height:130px;overflow:hidden;pointer-events:none}
+.mole{
+  position:absolute;left:50%;bottom:0;width:112px;max-width:100%;
+  transform:translate(-50%,110%);transition:transform .22s ease-out;
+  border:none;background:none;padding:0;pointer-events:auto;
+  display:flex;flex-direction:column;align-items:center;
+}
+.cell.up .mole{transform:translate(-50%,0)}
+.tag{
+  font-size:21px;padding:4px 10px;border-radius:10px;border:2px solid rgba(0,0,0,.35);
+  color:#3d2a18;box-shadow:0 3px 0 rgba(0,0,0,.25);margin-bottom:2px;white-space:nowrap;
+}
+.mole svg{width:70px;height:70px;display:block}
+.cell.hit .mole{transform:translate(-50%,40%) scale(.9)}
+.cell.wrong .mole{animation:shake .35s}
+@keyframes shake{25%{margin-left:-6px}75%{margin-left:6px}}
+.pop{
+  position:absolute;left:50%;top:6px;transform:translateX(-50%);font-size:24px;color:#fff;
+  text-shadow:0 2px 0 rgba(0,0,0,.4);pointer-events:none;animation:rise .7s forwards;z-index:3;
+}
+@keyframes rise{to{transform:translate(-50%,-30px);opacity:0}}
+
+/* result + ranking */
+.result{text-align:center}
+.score-big{font-size:64px;line-height:1;margin:6px 0}
+.stats{color:var(--ink-soft);font-size:16px;margin-bottom:12px}
+.name-in{
+  width:100%;font-family:inherit;font-size:22px;padding:12px;border-radius:14px;
+  border:3px solid var(--frame);background:var(--chip-off);color:var(--ink);text-align:center;margin-bottom:10px;
+}
+.msg{font-size:15px;color:var(--red);min-height:20px;margin:4px 0}
+.datebar{display:flex;align-items:center;gap:6px;margin:8px 0 10px}
+.datebar input{
+  flex:1;min-width:0;font-family:inherit;font-size:17px;padding:8px;border-radius:12px;
+  border:2px solid var(--frame);background:var(--chip-off);color:var(--ink);text-align:center;
+}
+.arrow{border:2px solid var(--frame);background:var(--sun);color:#3d2a18;border-radius:12px;width:44px;height:42px;font-size:18px}
+.board{list-style:none;margin:0 0 12px;padding:0;display:flex;flex-direction:column;gap:6px}
+.board li{
+  display:grid;grid-template-columns:40px 1fr auto;align-items:center;gap:8px;
+  background:var(--chip-off);border-radius:14px;padding:8px 12px;font-size:18px;
+}
+.board li.me{outline:3px solid var(--good)}
+.board .rk{font-size:22px;text-align:center}
+.board .who small{display:block;font-size:13px;color:var(--ink-soft)}
+.board .pt{font-size:22px}
+.empty{text-align:center;color:var(--ink-soft);padding:24px 0;font-size:17px}
+.note{font-size:13px;color:var(--ink-soft);text-align:center;margin:6px 0 0}
+@media (prefers-reduced-motion: reduce){
+  .mole{transition:none}.pop,.target.flash,.cell.wrong .mole{animation:none}
+}
+@media (max-width:360px){.cell{height:132px}.mole svg{width:58px;height:58px}.tag{font-size:18px}}
+
+.board li{grid-template-columns:40px 1fr auto auto}
+.del{border:2px solid var(--red);background:transparent;color:var(--red);border-radius:10px;padding:6px 10px;font-size:15px}
+.del:hover{background:var(--red);color:#fff}
+.danger{background:var(--red);box-shadow:0 6px 0 #a02a23;font-size:19px;padding:12px}
+.danger:active:not(:disabled){box-shadow:0 2px 0 #a02a23}
+.count{color:var(--ink-soft);font-size:15px;margin:0 0 8px}
+</style>
+</head>
+<body>
+<main class="app">
+  <div class="top"><div class="logo">기록 관리</div></div>
+
+  <section id="loginBox">
+    <h2>선생님 비밀번호</h2>
+    <p class="hint">Vercel에 넣어 둔 비밀번호를 입력하세요.</p>
+    <input class="name-in" id="pw" type="password" autocomplete="current-password" aria-label="비밀번호">
+    <p class="msg" id="loginMsg"></p>
+    <button class="big" id="loginBtn">들어가기</button>
+  </section>
+
+  <section id="adminBox" class="hidden">
+    <div class="datebar">
+      <button class="arrow" id="prevDay" aria-label="전날">◀</button>
+      <input type="date" id="dateIn" aria-label="날짜 고르기">
+      <button class="arrow" id="nextDay" aria-label="다음날">▶</button>
+    </div>
+    <p class="count" id="count"></p>
+    <ol class="board" id="board"></ol>
+    <button class="big danger" id="delAll">이 날짜 기록 모두 지우기</button>
+    <p class="msg" id="adminMsg"></p>
+    <button class="big alt" id="logout" style="margin-top:8px">나가기</button>
+    <p class="note"><a href="/" style="color:inherit">게임으로 가기</a></p>
+  </section>
+</main>
+<script>
+(function(){
+const $=id=>document.getElementById(id);
+const p=n=>String(n).padStart(2,"0");
+const ymd=d=>`${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`;
+const todayKST=()=>ymd(new Date(Date.now()+(new Date().getTimezoneOffset()+540)*60000));
+const shift=(s,n)=>{const [y,m,d]=s.split("-").map(Number);const t=new Date(y,m-1,d);t.setDate(t.getDate()+n);return ymd(t);};
+const minLabel=t=>(t%60===0?`${t/60}분`:`${t}초`);
+function danLabel(arr){const a=[...arr].sort((x,y)=>x-y);if(!a.length)return"";const c=a.every((v,i)=>i===0||v===a[i-1]+1);return a.length>2&&c?`${a[0]}~${a[a.length-1]}단`:a.join(", ")+"단";}
+
+let pw="";
+try{ pw=sessionStorage.getItem("mole-teacher")||""; }catch(e){}
+
+async function api(method,query){
+  const res=await fetch("/api/admin?"+query,{method,headers:{"x-teacher-password":pw}});
+  const body=await res.json().catch(()=>({}));
+  if(!res.ok){ const err=new Error(body.error||"오류가 났어요."); err.status=res.status; throw err; }
+  return body;
+}
+
+async function login(){
+  pw=$("pw").value; $("loginMsg").textContent="";
+  if(!pw){ $("loginMsg").textContent="비밀번호를 입력하세요."; return; }
+  try{
+    $("dateIn").value=$("dateIn").value||todayKST();
+    await api("GET","date="+$("dateIn").value);
+    try{ sessionStorage.setItem("mole-teacher",pw); }catch(e){}
+    $("loginBox").classList.add("hidden"); $("adminBox").classList.remove("hidden");
+    load();
+  }catch(e){ $("loginMsg").textContent=e.message; }
+}
+$("loginBtn").onclick=login;
+$("pw").addEventListener("keydown",e=>{ if(e.key==="Enter") login(); });
+$("logout").onclick=()=>{ pw=""; try{sessionStorage.removeItem("mole-teacher");}catch(e){} $("pw").value=""; $("adminBox").classList.add("hidden"); $("loginBox").classList.remove("hidden"); };
+
+$("prevDay").onclick=()=>{ $("dateIn").value=shift($("dateIn").value,-1); load(); };
+$("nextDay").onclick=()=>{ $("dateIn").value=shift($("dateIn").value,1); load(); };
+$("dateIn").onchange=load;
+
+let seq=0;
+async function load(){
+  const date=$("dateIn").value, my=++seq;
+  const board=$("board"); $("adminMsg").textContent="";
+  let rows;
+  try{ rows=(await api("GET","date="+date)).scores; }
+  catch(e){ if(my!==seq)return; if(e.status===401){$("logout").click();$("loginMsg").textContent=e.message;return;} $("adminMsg").textContent=e.message; return; }
+  if(my!==seq) return;
+  board.innerHTML="";
+  $("count").textContent=`기록 ${rows.length}개`;
+  $("delAll").disabled=!rows.length;
+  if(!rows.length){ const li=document.createElement("li"); li.className="empty"; li.style.display="block"; li.style.background="none"; li.textContent="이 날짜에는 기록이 없어요."; board.appendChild(li); return; }
+  rows.forEach((r,i)=>{
+    const li=document.createElement("li");
+    const rk=document.createElement("span"); rk.className="rk"; rk.textContent=i+1;
+    const who=document.createElement("span"); who.className="who"; who.textContent=r.name;
+    const sm=document.createElement("small"); const t=new Date(r.ts);
+    sm.textContent=`${danLabel(r.dans||[])} · ${minLabel(r.time||180)} · ${p(t.getHours())}:${p(t.getMinutes())}`;
+    who.appendChild(sm);
+    const pt=document.createElement("span"); pt.className="pt"; pt.textContent=r.score+"점";
+    const del=document.createElement("button"); del.className="del"; del.textContent="지우기";
+    del.setAttribute("aria-label",`${r.name} ${r.score}점 기록 지우기`);
+    del.onclick=async()=>{
+      if(!confirm(`${r.name} (${r.score}점) 기록을 지울까요?`)) return;
+      del.disabled=true;
+      try{ await api("DELETE",`date=${date}&id=${encodeURIComponent(r.id)}`); load(); }
+      catch(e){ del.disabled=false; $("adminMsg").textContent=e.message; }
+    };
+    li.append(rk,who,pt,del); board.appendChild(li);
+  });
+}
+$("delAll").onclick=async()=>{
+  const date=$("dateIn").value;
+  if(!confirm(`${date} 기록을 모두 지울까요? 되돌릴 수 없어요.`)) return;
+  try{ await api("DELETE",`date=${date}&all=1`); load(); }
+  catch(e){ $("adminMsg").textContent=e.message; }
+};
+
+if(pw){ $("pw").value=pw; login(); }
+})();
+</script>
+</body>
+</html>

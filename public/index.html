@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>구구단 두더지 잡기</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
+<style>
+:root{
+  --sky1:#bfe7f5; --sky2:#9fd8b8;
+  --frame:#5a3b22; --frame-hi:#7a5332;
+  --card:#fffaf0; --ink:#3d2a18; --ink-soft:#7a6450;
+  --sun:#ffd23f; --sun-deep:#f5a300;
+  --grass1:#8fcf5a; --grass2:#5fa83a;
+  --hole:#2a1810; --red:#e8453c; --good:#2f9e44;
+  --chip-off:#f1e6d3;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --sky1:#1d3440; --sky2:#1f3a2c; --card:#2b2118; --ink:#fbeede; --ink-soft:#c9b49c; --chip-off:#3d3024;
+  }
+}
+:root[data-theme="dark"]{
+  --sky1:#1d3440; --sky2:#1f3a2c; --card:#2b2118; --ink:#fbeede; --ink-soft:#c9b49c; --chip-off:#3d3024;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+html,body{margin:0;min-height:100%}
+body{
+  font-family:"Jua","Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif;
+  background:linear-gradient(180deg,var(--sky1),var(--sky2));
+  color:var(--ink);
+  display:flex;justify-content:center;padding:16px 12px;
+  -webkit-tap-highlight-color:transparent;
+}
+.app{
+  width:100%;max-width:440px;
+  background:var(--card);border:6px solid var(--frame);border-radius:28px;
+  padding:14px;box-shadow:0 8px 0 var(--frame-hi);
+}
+button{font-family:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible{outline:3px solid #2f6fdf;outline-offset:2px}
+.hidden{display:none!important}
+
+/* header */
+.top{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
+.logo{font-size:22px;color:var(--frame);letter-spacing:.5px}
+:root[data-theme="dark"] .logo{color:var(--sun)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .logo{color:var(--sun)}}
+.pills{display:flex;gap:6px}
+.pill{border-radius:12px;padding:5px 10px;font-size:15px;color:#fff;background:#5a3b22}
+.pill.time{background:var(--red)}
+
+/* start screen */
+h2{margin:6px 0 4px;font-size:20px;font-weight:normal}
+.hint{margin:0 0 12px;color:var(--ink-soft);font-size:15px}
+.chips{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px}
+.chip{
+  border:3px solid var(--frame);border-radius:16px;padding:12px 0;font-size:22px;
+  background:var(--chip-off);color:var(--ink);box-shadow:0 4px 0 var(--frame);
+  transition:transform .08s;
+}
+.chip[aria-pressed="true"]{background:var(--sun);color:#3d2a18}
+.chip:active{transform:translateY(3px);box-shadow:0 1px 0 var(--frame)}
+.row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.small{
+  border:2px solid var(--frame);border-radius:12px;background:transparent;color:var(--ink);
+  padding:6px 12px;font-size:15px;
+}
+.small[aria-pressed="true"]{background:var(--frame);color:#fff}
+.big{
+  width:100%;border:none;border-radius:18px;padding:16px;font-size:24px;color:#fff;
+  background:var(--good);box-shadow:0 6px 0 #1f6b2e;margin-top:4px;
+}
+.big:disabled{background:#a9a29a;box-shadow:0 6px 0 #7d766f;cursor:not-allowed}
+.big.alt{background:#2f6fdf;box-shadow:0 6px 0 #1f4ea3}
+.big:active:not(:disabled){transform:translateY(4px);box-shadow:0 2px 0 #1f6b2e}
+.sel-sum{min-height:22px;font-size:16px;color:var(--ink-soft);margin:0 0 6px}
+
+/* game */
+.target{
+  background:linear-gradient(180deg,var(--sun),var(--sun-deep));
+  border:4px solid var(--frame);border-radius:20px;text-align:center;padding:6px 8px 4px;color:#3d2a18;
+  margin-bottom:10px;
+}
+.target small{font-size:14px;display:block}
+.target b{font-weight:normal;font-size:56px;line-height:1.05;display:block}
+.target.flash{animation:flash .35s}
+@keyframes flash{50%{transform:scale(1.06)}}
+.field{
+  background:radial-gradient(circle at 50% 30%,var(--grass1),var(--grass2));
+  border:4px solid var(--frame);border-radius:20px;padding:14px 8px 18px;
+  display:grid;grid-template-columns:repeat(3,1fr);gap:4px 6px;position:relative;
+}
+.cell{position:relative;height:150px}
+.hole{
+  position:absolute;left:8%;right:8%;bottom:6px;height:52px;border-radius:50%;
+  background:var(--hole);box-shadow:inset 0 6px 10px rgba(0,0,0,.6);
+}
+.pit{position:absolute;left:0;right:0;bottom:22px;height:130px;overflow:hidden;pointer-events:none}
+.mole{
+  position:absolute;left:50%;bottom:0;width:112px;max-width:100%;
+  transform:translate(-50%,110%);transition:transform .22s ease-out;
+  border:none;background:none;padding:0;pointer-events:auto;
+  display:flex;flex-direction:column;align-items:center;
+}
+.cell.up .mole{transform:translate(-50%,0)}
+.tag{
+  font-size:21px;padding:4px 10px;border-radius:10px;border:2px solid rgba(0,0,0,.35);
+  color:#3d2a18;box-shadow:0 3px 0 rgba(0,0,0,.25);margin-bottom:2px;white-space:nowrap;
+}
+.mole svg{width:70px;height:70px;display:block}
+.cell.hit .mole{transform:translate(-50%,40%) scale(.9)}
+.cell.wrong .mole{animation:shake .35s}
+@keyframes shake{25%{margin-left:-6px}75%{margin-left:6px}}
+.pop{
+  position:absolute;left:50%;top:6px;transform:translateX(-50%);font-size:24px;color:#fff;
+  text-shadow:0 2px 0 rgba(0,0,0,.4);pointer-events:none;animation:rise .7s forwards;z-index:3;
+}
+@keyframes rise{to{transform:translate(-50%,-30px);opacity:0}}
+
+/* result + ranking */
+.result{text-align:center}
+.score-big{font-size:64px;line-height:1;margin:6px 0}
+.stats{color:var(--ink-soft);font-size:16px;margin-bottom:12px}
+.name-in{
+  width:100%;font-family:inherit;font-size:22px;padding:12px;border-radius:14px;
+  border:3px solid var(--frame);background:var(--chip-off);color:var(--ink);text-align:center;margin-bottom:10px;
+}
+.msg{font-size:15px;color:var(--red);min-height:20px;margin:4px 0}
+.datebar{display:flex;align-items:center;gap:6px;margin:8px 0 10px}
+.datebar input{
+  flex:1;min-width:0;font-family:inherit;font-size:17px;padding:8px;border-radius:12px;
+  border:2px solid var(--frame);background:var(--chip-off);color:var(--ink);text-align:center;
+}
+.arrow{border:2px solid var(--frame);background:var(--sun);color:#3d2a18;border-radius:12px;width:44px;height:42px;font-size:18px}
+.board{list-style:none;margin:0 0 12px;padding:0;display:flex;flex-direction:column;gap:6px}
+.board li{
+  display:grid;grid-template-columns:40px 1fr auto;align-items:center;gap:8px;
+  background:var(--chip-off);border-radius:14px;padding:8px 12px;font-size:18px;
+}
+.board li.me{outline:3px solid var(--good)}
+.board .rk{font-size:22px;text-align:center}
+.board .who small{display:block;font-size:13px;color:var(--ink-soft)}
+.board .pt{font-size:22px}
+.empty{text-align:center;color:var(--ink-soft);padding:24px 0;font-size:17px}
+.note{font-size:13px;color:var(--ink-soft);text-align:center;margin:6px 0 0}
+@media (prefers-reduced-motion: reduce){
+  .mole{transition:none}.pop,.target.flash,.cell.wrong .mole{animation:none}
+}
+@media (max-width:360px){.cell{height:132px}.mole svg{width:58px;height:58px}.tag{font-size:18px}}
+</style>
+</head>
+<body>
+<main class="app">
+  <div class="top">
+    <div class="logo">구구단 두더지</div>
+    <div class="pills">
+      <span class="pill" id="scorePill">⭐ 0</span>
+      <span class="pill time" id="timePill">⏱ 3:00</span>
+    </div>
+  </div>
+
+  <!-- 시작 화면 -->
+  <section id="startScreen">
+    <h2>어떤 단을 연습할까요?</h2>
+    <p class="hint">여러 단을 함께 고를 수 있어요.</p>
+    <div class="chips" id="chips"></div>
+    <div class="row">
+      <button class="small" id="allBtn">모두 고르기</button>
+      <button class="small" id="clearBtn">모두 지우기</button>
+    </div>
+    <h2>게임 시간</h2>
+    <div class="row" id="timeRow"></div>
+    <p class="sel-sum" id="selSum"></p>
+    <button class="big" id="startBtn" disabled>게임 시작</button>
+    <button class="big alt" id="rankBtn1" style="margin-top:12px">오늘의 랭킹 보기</button>
+  </section>
+
+  <!-- 게임 화면 -->
+  <section id="gameScreen" class="hidden">
+    <div class="target" id="targetBox">
+      <small>이 수가 되는 곱셈을 찾아 잡아요!</small>
+      <b id="targetNum">0</b>
+    </div>
+    <div class="field" id="field"></div>
+  </section>
+
+  <!-- 결과 화면 -->
+  <section id="resultScreen" class="hidden result">
+    <h2>게임 끝!</h2>
+    <div class="score-big" id="finalScore">0</div>
+    <div class="stats" id="finalStats"></div>
+    <input class="name-in" id="nameIn" maxlength="10" placeholder="이름을 쓰세요" autocomplete="off">
+    <p class="msg" id="saveMsg"></p>
+    <button class="big" id="saveBtn">랭킹에 올리기</button>
+    <button class="big alt" id="againBtn" style="margin-top:12px">다시 하기</button>
+  </section>
+
+  <!-- 랭킹 화면 -->
+  <section id="rankScreen" class="hidden">
+    <h2>날짜별 랭킹</h2>
+    <div class="datebar">
+      <button class="arrow" id="prevDay" aria-label="전날">◀</button>
+      <input type="date" id="dateIn" aria-label="날짜 고르기">
+      <button class="arrow" id="nextDay" aria-label="다음날">▶</button>
+    </div>
+    <ol class="board" id="board"></ol>
+    <button class="big" id="homeBtn">처음으로</button>
+    <p class="note" id="storeNote"></p>
+  </section>
+</main>
+
+<script>
+(function(){
+const $ = id => document.getElementById(id);
+const TAG_COLORS = ["#ffd66b","#9be39b","#ff9ec4","#ffb56b","#a8d4ff","#d6b3ff","#fff08a","#8ee6d8"];
+const MOLE_SVG = `<svg viewBox="0 0 80 80" aria-hidden="true">
+  <ellipse cx="40" cy="52" rx="30" ry="30" fill="#9b6a3c"/>
+  <ellipse cx="40" cy="60" rx="18" ry="16" fill="#d9ad7c"/>
+  <circle cx="16" cy="28" r="7" fill="#7a5130"/><circle cx="64" cy="28" r="7" fill="#7a5130"/>
+  <circle cx="29" cy="42" r="4.5" fill="#2a1810"/><circle cx="51" cy="42" r="4.5" fill="#2a1810"/>
+  <circle cx="30.5" cy="40.5" r="1.5" fill="#fff"/><circle cx="52.5" cy="40.5" r="1.5" fill="#fff"/>
+  <ellipse cx="40" cy="51" rx="6" ry="4.5" fill="#e8455a"/>
+  <path d="M34 58 q6 5 12 0" stroke="#2a1810" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+  <circle cx="22" cy="54" r="4" fill="#f4a3a3" opacity=".6"/><circle cx="58" cy="54" r="4" fill="#f4a3a3" opacity=".6"/>
+</svg>`;
+
+/* ---------- 상태 ---------- */
+const selected = new Set();
+let gameTime = 180;
+const fmt=t=>`${Math.floor(t/60)}:${String(t%60).padStart(2,"0")}`;
+const minLabel=t=>(t%60===0?`${t/60}분`:`${t}초`);
+let score = 0, correct = 0, wrong = 0, timeLeft = 0;
+let target = 0, running = false;
+let tickTimer = null, spawnTimer = null;
+const cells = [];
+let lastSavedId = null;
+
+/* ---------- 날짜 ---------- */
+function todayKST(){ return ymd(new Date(Date.now()+ (new Date().getTimezoneOffset()+540)*60000)); }
+function ymd(d){ const p=n=>String(n).padStart(2,"0"); return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())}`; }
+function shiftDate(s,days){ const [y,m,d]=s.split("-").map(Number); const dt=new Date(y,m-1,d); dt.setDate(dt.getDate()+days); return ymd(dt); }
+
+/* ---------- 단 선택 ---------- */
+function danLabel(arr){
+  const a=[...arr].sort((x,y)=>x-y);
+  if(!a.length) return "";
+  const cont=a.every((v,i)=>i===0||v===a[i-1]+1);
+  if(a.length>2&&cont) return `${a[0]}~${a[a.length-1]}단`;
+  return a.join(", ")+"단";
+}
+const chipsEl=$("chips");
+for(let d=2; d<=9; d++){
+  const b=document.createElement("button");
+  b.className="chip"; b.textContent=d+"단"; b.setAttribute("aria-pressed","false");
+  b.onclick=()=>{ selected.has(d)?selected.delete(d):selected.add(d); refreshChips(); };
+  b.dataset.d=d; chipsEl.appendChild(b);
+}
+function refreshChips(){
+  chipsEl.querySelectorAll(".chip").forEach(b=>b.setAttribute("aria-pressed",selected.has(+b.dataset.d)));
+  $("startBtn").disabled=selected.size===0;
+  $("selSum").textContent=selected.size?`${danLabel(selected)} 문제가 나와요`:"단을 하나 이상 골라 주세요";
+}
+$("allBtn").onclick=()=>{for(let d=2;d<=9;d++)selected.add(d);refreshChips();};
+$("clearBtn").onclick=()=>{selected.clear();refreshChips();};
+[180,300].forEach(t=>{
+  const b=document.createElement("button"); b.className="small"; b.textContent=minLabel(t);
+  b.setAttribute("aria-pressed",t===gameTime);
+  b.onclick=()=>{gameTime=t;$("timeRow").querySelectorAll("button").forEach(x=>x.setAttribute("aria-pressed",x===b));$("timePill").textContent="⏱ "+fmt(t);};
+  $("timeRow").appendChild(b);
+});
+refreshChips();
+
+/* ---------- 화면 전환 ---------- */
+function show(id){ ["startScreen","gameScreen","resultScreen","rankScreen"].forEach(s=>$(s).classList.toggle("hidden",s!==id)); }
+
+/* ---------- 게임판 ---------- */
+const field=$("field");
+for(let i=0;i<9;i++){
+  const c=document.createElement("div"); c.className="cell";
+  c.innerHTML=`<div class="hole"></div><div class="pit"><button class="mole" tabindex="-1"><span class="tag"></span>${MOLE_SVG}</button></div>`;
+  const m={el:c, btn:c.querySelector(".mole"), tag:c.querySelector(".tag"), a:0,b:0, up:false, hideT:null};
+  m.btn.onclick=()=>whack(m);
+  field.appendChild(c); cells.push(m);
+}
+const rnd=n=>Math.floor(Math.random()*n);
+const pick=arr=>arr[rnd(arr.length)];
+function randomProblem(){ return [pick([...selected]), 1+rnd(9)]; }
+
+function newTarget(){
+  const [a,b]=randomProblem(); target=a*b;
+  $("targetNum").textContent=target;
+  const tb=$("targetBox"); tb.classList.remove("flash"); void tb.offsetWidth; tb.classList.add("flash");
+  // 화면에 떠 있는 두더지 중 이미 정답인 것은 그대로 두고, 나머지는 곧 바뀜
+}
+function correctVisible(){ return cells.some(m=>m.up && m.a*m.b===target); }
+
+function raise(m, forceCorrect){
+  let a,b;
+  if(forceCorrect){
+    const opts=[]; selected.forEach(d=>{ if(target%d===0 && target/d>=1 && target/d<=9) opts.push([d,target/d]); });
+    [a,b]=pick(opts);
+  } else {
+    let tries=0;
+    do{ [a,b]=randomProblem(); tries++; } while(a*b===target && tries<20);
+  }
+  m.a=a; m.b=b; m.up=true;
+  m.tag.textContent=`${a}×${b}`;
+  m.tag.style.background=pick(TAG_COLORS);
+  m.btn.tabIndex=0; m.btn.setAttribute("aria-label",`${a} 곱하기 ${b}`);
+  m.el.classList.remove("hit","wrong"); m.el.classList.add("up");
+  clearTimeout(m.hideT);
+  const stay = 2200 + rnd(900);
+  m.hideT=setTimeout(()=>lower(m), stay);
+}
+function lower(m){
+  m.up=false; m.el.classList.remove("up"); m.btn.tabIndex=-1; clearTimeout(m.hideT);
+}
+function spawn(){
+  if(!running) return;
+  const free=cells.filter(m=>!m.up);
+  if(free.length){
+    const upCount=9-free.length;
+    const needCorrect=!correctVisible() && (upCount>=2 || Math.random()<.6);
+    raise(pick(free), needCorrect);
+    if(upCount<2 && free.length>1) raise(pick(cells.filter(m=>!m.up)), false);
+  }
+  spawnTimer=setTimeout(spawn, 750+rnd(400));
+}
+function popText(m,txt,color){
+  const p=document.createElement("div"); p.className="pop"; p.textContent=txt; p.style.color=color;
+  m.el.appendChild(p); setTimeout(()=>p.remove(),700);
+}
+function whack(m){
+  if(!running||!m.up) return;
+  if(m.a*m.b===target){
+    score+=10; correct++;
+    popText(m,"+10","#fff");
+    m.el.classList.add("hit"); m.up=false; m.btn.tabIndex=-1; clearTimeout(m.hideT);
+    setTimeout(()=>m.el.classList.remove("up","hit"),180);
+    // 이전 목표에 맞던 다른 두더지도 정리
+    cells.forEach(o=>{ if(o!==m && o.up && o.a*o.b===target) lower(o); });
+    newTarget();
+  } else {
+    score=Math.max(0,score-3); wrong++;
+    popText(m,`${m.a}×${m.b}=${m.a*m.b}`,"#ffe3e0");
+    m.el.classList.remove("wrong"); void m.el.offsetWidth; m.el.classList.add("wrong");
+  }
+  $("scorePill").textContent="⭐ "+score;
+}
+
+function startGame(){
+  score=0;correct=0;wrong=0;timeLeft=gameTime;running=true;lastSavedId=null;
+  cells.forEach(lower);
+  $("scorePill").textContent="⭐ 0"; $("timePill").textContent="⏱ "+fmt(timeLeft);
+  show("gameScreen"); newTarget();
+  setTimeout(spawn,400);
+  tickTimer=setInterval(()=>{
+    timeLeft--; $("timePill").textContent="⏱ "+fmt(timeLeft);
+    if(timeLeft<=0) endGame();
+  },1000);
+}
+function endGame(){
+  running=false; clearInterval(tickTimer); clearTimeout(spawnTimer);
+  cells.forEach(lower);
+  $("finalScore").textContent=score+"점";
+  $("finalStats").textContent=`${danLabel(selected)} · ${minLabel(gameTime)} · 맞힘 ${correct}개 · 틀림 ${wrong}개`;
+  $("saveMsg").textContent=""; $("saveBtn").disabled=false; $("saveBtn").textContent="랭킹에 올리기";
+  show("resultScreen");
+  setTimeout(()=>$("nameIn").focus(),100);
+}
+$("startBtn").onclick=startGame;
+$("againBtn").onclick=()=>{ $("timePill").textContent="⏱ "+fmt(gameTime); show("startScreen"); };
+
+/* ---------- 랭킹 저장소 (Vercel API) ---------- */
+async function saveScore(){
+  const name=$("nameIn").value.trim();
+  if(!name){ $("saveMsg").textContent="이름을 먼저 써 주세요."; $("nameIn").focus(); return; }
+  $("saveBtn").disabled=true; $("saveBtn").textContent="올리는 중…"; $("saveMsg").textContent="";
+  const rec={ name:name.slice(0,10), score, correct, wrong, dans:[...selected].sort((a,b)=>a-b), time:gameTime };
+  try{
+    const res=await fetch("/api/scores",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(rec)});
+    if(!res.ok) throw new Error();
+    const saved=await res.json();
+    lastSavedId=saved.id;
+    openRank(saved.date);
+  }catch(e){
+    $("saveMsg").textContent="랭킹에 올리지 못했어요. 인터넷 연결을 확인하고 다시 눌러 주세요.";
+    $("saveBtn").disabled=false; $("saveBtn").textContent="랭킹에 올리기";
+  }
+}
+$("saveBtn").onclick=saveScore;
+$("nameIn").addEventListener("keydown",e=>{ if(e.key==="Enter") saveScore(); });
+
+function openRank(date){ $("dateIn").value=date||todayKST(); show("rankScreen"); loadRank(); }
+$("rankBtn1").onclick=()=>openRank();
+$("homeBtn").onclick=()=>{ $("timePill").textContent="⏱ "+fmt(gameTime); show("startScreen"); };
+$("prevDay").onclick=()=>{ $("dateIn").value=shiftDate($("dateIn").value||todayKST(),-1); loadRank(); };
+$("nextDay").onclick=()=>{ $("dateIn").value=shiftDate($("dateIn").value||todayKST(),1); loadRank(); };
+$("dateIn").onchange=loadRank;
+
+let loadSeq=0;
+async function loadRank(){
+  const date=$("dateIn").value; const seq=++loadSeq;
+  const board=$("board"); board.innerHTML=""; 
+  let rows=[];
+  $("storeNote").textContent="";
+  try{
+    const res=await fetch("/api/scores?date="+encodeURIComponent(date));
+    if(!res.ok) throw new Error();
+    rows=(await res.json()).scores||[];
+  }catch(e){
+    if(seq!==loadSeq) return;
+    $("storeNote").textContent="랭킹을 불러오지 못했어요. 인터넷 연결을 확인해 주세요.";
+    return;
+  }
+  if(seq!==loadSeq) return;
+  rows.sort((a,b)=>b.score-a.score || a.ts-b.ts);
+  if(!rows.length){ const li=document.createElement("li"); li.className="empty"; li.style.display="block"; li.style.background="none"; li.textContent="이 날짜에는 아직 기록이 없어요. 게임을 해서 첫 번째로 올라가 보세요!"; board.appendChild(li); return; }
+  const medals=["🥇","🥈","🥉"];
+  rows.slice(0,30).forEach((r,i)=>{
+    const li=document.createElement("li"); if(r.id===lastSavedId) li.className="me";
+    const rk=document.createElement("span"); rk.className="rk"; rk.textContent=medals[i]||(i+1);
+    const who=document.createElement("span"); who.className="who"; who.textContent=r.name;
+    const sm=document.createElement("small");
+    const t=new Date(r.ts); sm.textContent=`${danLabel(r.dans||[])} · ${minLabel(r.time||180)} · ${String(t.getHours()).padStart(2,"0")}:${String(t.getMinutes()).padStart(2,"0")}`;
+    who.appendChild(sm);
+    const pt=document.createElement("span"); pt.className="pt"; pt.textContent=r.score+"점";
+    li.append(rk,who,pt); board.appendChild(li);
+  });
+  const me=board.querySelector(".me"); if(me) me.scrollIntoView({block:"nearest"});
+}
+})();
+</script>
+</body>
+</html>
